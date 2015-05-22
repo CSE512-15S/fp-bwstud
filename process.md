@@ -63,4 +63,56 @@ ISSUE #2
 - And we're in. 2.9
 - And it works. 2.10
 - Booya.
- 
+
+
+
+5.18.15
+I've gotten the shapefiles I need from the NHDPlus. Instead of trying to download the whole thing, I've taken the snapshot and attributes file, which is what I saw was being acquire in the makefile of Bostock's U.S. Rivers project, for each of the 21 HUC's from [this url](http://www.horizon-systems.com/NHDPlus/NHDPlusV2_data.php). Topojson is working, no large file issues, no bogging down. Great. Geospatial data for the NHD layer is, at least in part, acquired. Additionally, there's a list of HUC subregions [here](http://water.usgs.gov/GIS/huc_name.html) another one [here](https://water.usgs.gov/GIS/wbd_huc8.pdf) and .gdb datasets for subregions [here](ftp://nhdftp.usgs.gov/DataSets/Staged/SubRegions/FileGDB/HighResolution/)(these can be converted to shapefiles or geojson with ogr2ogr or qgis).
+
+I'm trying to get the streamflow data and it's proving more difficult. The data is available via a REST API, but the quantity of data that comes through with unfiltered requests is enormous. I'm going to have to build some kind of a backend, which I have no idea how to do. The data is for thousands of monitoring sites around the U.S. dating back to October 2007, and I need to strategize how to break it up. The country id divided into hydrologic units, which are assigned the severely apt Hydrologic Unit Codes 1-17. These, in turn, have subregions, which have subregions of their own and so on 6 layers deep. I may be able to manage the data more effectively by taking advantage of this structure.
+
+
+Some reading on Vector Tiles:
+https://github.com/NelsonMinar/vector-river-map
+http://tilestache.org/
+http://openstreetmap.us/~migurski/vector-datasource/
+http://wiki.openstreetmap.org/wiki/Vector_tiles
+https://github.com/mapbox/vector-tile-spec/wiki/Implementations
+http://dimensionaledge.com/intro-vector-tiling-map-reduce-postgis/
+https://nelsonslog.wordpress.com/2013/06/10/leaflet-geojson-vector-tiles/
+http://mattmakesmaps.com/
+https://github.com/SpatialServer/Leaflet.MapboxVectorTile
+https://github.com/nrenner/leaflet-tilelayer-vector
+http://bl.ocks.org/wboykinm/7393674
+https://speakerdeck.com/hallahan/leaflet-vector-tiles
+http://bl.ocks.org/nrenner/5635334
+http://bl.ocks.org/svmatthews/6081504
+https://www.mapbox.com/developers/vector-tiles/
+
+
+ 5.20.15
+
+ Task Support
+ - Compare volumes for a set of sites over time
+ - Compare volumes for separate sites or sets of sites over time
+ - Compare aggregate daily/monthly flow
+ - Correlate streamflow to municipal spending on water infrastructure in a given time period
+ - Examine streamflow during the period of effect of a given storm system
+ - Examine seasonal patterns in streamflow
+ - Surface anomylous sites in a local network
+ -
+
+Meeting w/Jeff Snyder 5.20.15
+Data Savings by shortening string length
+How can we confirm or reify peoples existing presumptions about streamflow data?
+Interesting filters and subsetting?
+
+5.21.15
+Tring to get data from the USGS water data portal to start evaluating. It's proving very challenging. There is a web data portal that seems like it's supposed to make accessing this data easier, but 
+
+
+https://github.com/cpettitt/dagre/wiki
+https://github.com/cpettitt/dagre-d3
+http://bl.ocks.org/bobbydavid/5841683
+
+http://jsonprettyprint.com/json-pretty-printer.php <<--- just saved me from losing my shit

@@ -1,0 +1,9 @@
+Brian Studwell
+bwstud
+
+Final Project Proposal
+Visualizing Streamflow through the National Hyrdologic System
+
+Inspired by one of the NASA Space Apps challenges this year, I aim to visualize the flow of water through the streams and rivers of the United States. The USGS provides access to current and historical flow data captured at 1.5 million sites across all 50 states and other U.S. territories and outlying areas. Instruments placed at these locations collect a variety of information, but of primary interest to this work is the flow of water in cubic feet per second. In addition, the EPA, in cooperation with the USGS, issues the National Hydrology Dataset Plus, a geo-spatial, hydrologic framework including National Hydrology Dataset, National Elevation Dataset, and Watershed Boundary Dataset. The most recent release dates to 2012. Both sources have well documented APIs.
+
+Current visualizations offered by these services are dated, and the opportunity for well designed graphics is rich. I would like to build a D3 visualization which offers a zoomable, nationwide map of streamflow, which continually updates with the live feed from the USGS, and offers the ability to view historical data, highlighting points of interest like droughts and major storms. I would also like to provide alternate views illustrating the major drainage regions of the US as network graphs. I anticipate that new ideas will emerge as the work goes on, but this should be plenty to start. If time allows, I would be very interested to see how streamflow is affected by weather, and examine how it might correlate to regional politics around agriculture and water regulation.
