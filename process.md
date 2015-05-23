@@ -116,3 +116,110 @@ https://github.com/cpettitt/dagre-d3
 http://bl.ocks.org/bobbydavid/5841683
 
 http://jsonprettyprint.com/json-pretty-printer.php <<--- just saved me from losing my shit
+http://jsonlint.com/
+https://github.com/SublimeLinter/SublimeLinter-json
+https://packagecontrol.io/packages/JSONLint
+
+5.22.15
+Ok, I've at least gotten the data to parse and show up in the browser. It's only one HUC, for a period of record of 2 days...
+
+It looks there are 363 discharge values in here(fig 3.0). That seems healthy. There's also an enormous quantity of data surrounding those figures(fig 3.1). How the **** do I get it out? That's tonight's task.
+
+http://www.d3noob.org/2013/01/selecting-filtering-subset-of-objects.html
+http://www.jeromecukier.net/blog/2012/05/28/manipulating-data-like-a-boss-with-d3/
+
+It's taken me four hours to get to this point:
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		// for(var object in timeSeries){
+		// 	console.log(object.getOwnPropertyNames());
+		// }
+		console.log(Object.keys(timeSeries))
+	})
+
+Now I can try to navigate this damn json file. Now I'm stuck. I can get three layers deep in the json with data.value.timeSeries, but to get to the next level I need to understand how to deal with keys that are all unique (fig3.2). I'm sure there's a way to use a loop to do this. Function(d) something?
+
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
+http://stackoverflow.com/questions/7387303/jquery-templates-nested-json-unique-key-names
+
+Yeeeesss! 
+This post got me there. http://stackoverflow.com/questions/5113847/accessing-elements-of-json-object-without-knowing-the-key-names
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			console.log(number);
+			console.log(timeSeries[number]);
+		}
+		console.log(Object.keys(timeSeries))
+	})
+
+That only took another hour...
+
+Ok. Progress. With this code...
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			console.log(number);
+			console.log(timeSeries[number].values[0].value[0].value);
+			// console.log(Object.keys(timeSeries[number].values));
+		}
+	})
+
+... I'm showing the list of values. Awesome. However, it appears that not all entities in the data actually have a value so the function stops after trying to read a property of an undefined. Sooo... Why did I get results from the USGS service that don't have the data I filtered for? Additionally, one of the values I do see is -99999, which is clearly wrong(fig 3.4).
+
+http://stackoverflow.com/questions/5144491/better-way-to-determine-if-value-exists-in-json-feed
+http://stackoverflow.com/questions/3021206/how-do-i-see-if-a-big-json-object-contains-a-value
+
+
+So, this works (see fig 3.5): 
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			console.log(Object.keys(timeSeries[number].values[0]))
+		}
+	})
+
+But this doesn't (fig 3.6):
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			console.log(Object.keys(timeSeries[number].values[0].value[0]))
+		}
+	})
+
+Aha! This shows me the empty spots in the data (fig 3.7):
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			console.log(Object.keys(timeSeries[number].values[0].value))
+		}
+	})
+
+Now... uh... what do I do about it? Check to make sure it's there?
+
+Mother******! Read it and weep. LET THERE BE DATA:
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		for(var number in timeSeries){
+			if(timeSeries[number].values[0].value.length > 0){
+				console.log(timeSeries[number].values[0].value[0].value)
+			}
+		}
+	})
+
+(see fig3.8)
+
+So this proves, in concept, that I can pull streamflow data from the USGS webservice, parse it, and render the actual streamflow value for a given site in the browser. I've been doing this with a test batch that covers, if I recall, just New England, and it's only daily summaries. And it's for a period of two days. So, that might mean I really only have half as many sites to work with as are shown here. And some of the values are negative. 
+
+If I can sort all that out, figure out how to retrieve, store, parse and serve timeseries data for a period of several years, and correlate the values to their map coordinates, and figure out what these values actually _mean_ in terms of volume, and align the coordinates to flowlines from the NHDPlus dataset, and craft an appropriate visualization for them, I'll really be getting somewhere!
+
+Oof.
+
+First, coordinates.

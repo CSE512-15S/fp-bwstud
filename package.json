@@ -1,0 +1,26 @@
+{
+  "name": "cse512-final-bwstud",
+  "version": "1.0.0",
+  "description": "",
+  "repository": "https://github.com/CSE512-15S/fp-bwstud.git",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browser-sync": "^2.7.1",
+    "gulp": "^3.8.11",
+    "gulp-autoprefixer": "^2.3.0",
+    "gulp-concat": "^2.5.2",
+    "gulp-csslint": "^0.1.5",
+    "gulp-minify-css": "^1.1.1",
+    "gulp-plumber": "^1.0.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^2.0.1",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-uglify": "^1.2.0",
+    "gulp-watch": "^4.2.4"
+  }
+}
