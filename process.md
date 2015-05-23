@@ -1,4 +1,5 @@
 5.16.15
+====================================================
 I think recording some notes on what I'm trying to do, and the issues I'm facing could be valuable for later reference. This is the first entry of a kind of work journal for the project. I started working on this stuff a few days ago, so this is going to mix together several days of struggling. The latest issue, that finally prompted me to start writing this stuff down, is that in trying to install QGIS with homebrew the install fails because it doesn't find the gdal library. Gdal is most definitely installed on my machine via homebrew, and is fully up to date. I attempted to isntall qgis via homebrew as well through the osgeo4mac tap, but it turns out that qgis also exists in the homebrew/science tap, which I installed to muck around with Python, and they're known to conflict over a pyqt error that I was getting. You just can't win.
 
 Objective: Convert shapefile acquired from NHDPlus to topojson so I can start trying to render it in D3.
@@ -67,6 +68,7 @@ ISSUE #2
 
 
 5.18.15
+====================================================
 I've gotten the shapefiles I need from the NHDPlus. Instead of trying to download the whole thing, I've taken the snapshot and attributes file, which is what I saw was being acquire in the makefile of Bostock's U.S. Rivers project, for each of the 21 HUC's from [this url](http://www.horizon-systems.com/NHDPlus/NHDPlusV2_data.php). Topojson is working, no large file issues, no bogging down. Great. Geospatial data for the NHD layer is, at least in part, acquired. Additionally, there's a list of HUC subregions [here](http://water.usgs.gov/GIS/huc_name.html) another one [here](https://water.usgs.gov/GIS/wbd_huc8.pdf) and .gdb datasets for subregions [here](ftp://nhdftp.usgs.gov/DataSets/Staged/SubRegions/FileGDB/HighResolution/)(these can be converted to shapefiles or geojson with ogr2ogr or qgis).
 
 I'm trying to get the streamflow data and it's proving more difficult. The data is available via a REST API, but the quantity of data that comes through with unfiltered requests is enormous. I'm going to have to build some kind of a backend, which I have no idea how to do. The data is for thousands of monitoring sites around the U.S. dating back to October 2007, and I need to strategize how to break it up. The country id divided into hydrologic units, which are assigned the severely apt Hydrologic Unit Codes 1-17. These, in turn, have subregions, which have subregions of their own and so on 6 layers deep. I may be able to manage the data more effectively by taking advantage of this structure.
@@ -90,8 +92,8 @@ http://bl.ocks.org/svmatthews/6081504
 https://www.mapbox.com/developers/vector-tiles/
 
 
- 5.20.15
-
+5.20.15
+====================================================
  Task Support
  - Compare volumes for a set of sites over time
  - Compare volumes for separate sites or sets of sites over time
@@ -108,6 +110,7 @@ How can we confirm or reify peoples existing presumptions about streamflow data?
 Interesting filters and subsetting?
 
 5.21.15
+====================================================
 Tring to get data from the USGS water data portal to start evaluating. It's proving very challenging. There is a web data portal that seems like it's supposed to make accessing this data easier, but 
 
 
@@ -121,6 +124,7 @@ https://github.com/SublimeLinter/SublimeLinter-json
 https://packagecontrol.io/packages/JSONLint
 
 5.22.15
+====================================================
 Ok, I've at least gotten the data to parse and show up in the browser. It's only one HUC, for a period of record of 2 days...
 
 It looks there are 363 discharge values in here(fig 3.0). That seems healthy. There's also an enormous quantity of data surrounding those figures(fig 3.1). How the **** do I get it out? That's tonight's task.
@@ -223,3 +227,71 @@ If I can sort all that out, figure out how to retrieve, store, parse and serve t
 Oof.
 
 First, coordinates.
+
+I think I need to jump to a different web service for Lat/Long. I used the 'Daily Values' web service which doesn't offer coordinates, for some reason, for the sites it supports. There is a dedicated 'Site Service', but it doesn't offer JSON output. Instead, it outputs a legacy format called USGS RDB, which it says is tab-delimited. If it's tab delimited, I think D3 should still be able to use it?
+
+Ok, I got a file with coordinates for all the sites in HUC 01(New England) from the Water Data for the Nation site (fig 3.9). http://waterdata.usgs.gov/nwis/inventory
+
+Time to learn about TSV 
+https://github.com/mbostock/d3/wiki/CSV#tsv
+https://github.com/mbostock/d3/wiki/CSV
+
+Uh-oh. Well, I guess it couldn't be easy, right? \
+
+	d3.tsv("./data/test.tsv", function(error, tsv){
+		if(error){console.error(error);}
+		console.log(tsv);
+	})
+
+(see fig 3.10)
+
+I see something about compliant formats:
+http://tools.ietf.org/html/rfc4180
+
+Maybe it would be easiest to convert to JSON?
+https://github.com/RubenVerborgh/tsv-to-json
+http://blaiprat.github.io/tsvToJson/
+https://www.npmjs.com/package/tsv-to-json
+http://thedatachef.blogspot.com/2011/01/convert-tsv-to-json-command-line.html
+
+5.23.15
+====================================================
+Inventory time. The test_pretty json file weighs in at 3.3mb. I need 17 more of those files to complete the country. I can minify it, but I think I'll have to process the data somehow to get a set that I can render in the browser without freaking out. 
+
+I need to map site names or numbers from the file with streamflow values, to coordinates from the other file. Holy shit. I just noticed this in the test_pretty.json.
+
+	"geoLocation": {
+	            "geogLocation": {
+	              "srs": "EPSG:4326",
+	              "latitude": 46.70055556,
+	              "longitude": -69.7155556
+	            },
+
+I'm blind. Let's see if it's consistent through the data.
+
+It's there for multiple sites in the console! (fig 3.11)
+Let's see if I can print it out with the value + dateTime I had already.
+
+awww yeahhh (fig 3.12). The code:
+
+	timeSeries[number].sourceInfo.geoLocation.geogLocation
+
+Money.
+
+
+All together now.
+
+	d3.json("./data/test_pretty.json", function(error, data){
+		var timeSeries = data.value.timeSeries;
+		console.log(data.value);
+		for(var number in timeSeries){
+			if(timeSeries[number].values[0].value.length > 0){
+				console.log("value: " + timeSeries[number].values[0].value[0].value + "\n" +
+				"dateTime: " + timeSeries[number].values[0].value[0].dateTime + "\n" +
+				"Lat: " + timeSeries[number].sourceInfo.geoLocation.geogLocation.latitude + 
+				"Long: " + timeSeries[number].sourceInfo.geoLocation.geogLocation.longitude)
+			}
+		}
+	})
+
+That's a beautiful thing. (fig 3.13)
