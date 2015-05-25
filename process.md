@@ -295,3 +295,118 @@ All together now.
 	})
 
 That's a beautiful thing. (fig 3.13)
+
+More coffee. Next task, I think, is to extract these values into a new file. I guess I need to learn Python now. Ideally, I want to pull time series data for every site across the US, for all values dating back to the beginning of the dataset in October of 2007. For reference, this test file was for two days. 
+
+Also, how can I tell what rivers/streams these sites belong to? <-- _I just emailed the USGS guys about this one._
+
+5.25.15
+====================================================
+Happy Memorial Day!
+I had to work on another project yesterday, but I'm turning back to this.  I've gotta get this moving. I have exactly two weeks to finish this.
+
+I've been working on a python script to extract the values I'm interested in (coordinates, site ID, streamflow), and spit them out in a new file. If I can do this on a test batch of data, I can set it up to process the whole timeseries and get a much more managable file. I've gotten the script to the point where it prints the relevant values. Now I need to figure out how to read those figures and write them to a file. Here is the script as it stands, which I've just been running from the Python interpreter in terminal. After some poking around on stackoverflow it seemed the consensus that for getting the data I should use the requests Python module which can be found [here](http://docs.python-requests.org/en/latest/). I'm using the USGS Instantaneous Values [web service](http://waterservices.usgs.gov/rest/IV-Test-Tool.html) as my data source. 
+
+	
+	# Import libraries.
+	import requests
+	import json
+
+	# declare request url, generated from USGS web services
+	url='http://waterservices.usgs.gov/nwis/iv/?format=json&huc=01&period=P1D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active'
+
+	# declare header for gzip compression
+	headers={'Accept-Encoding': 'gzip, compress'}
+
+	# create request as json
+	data = requests.get(url, headers=headers).json()
+
+	# access timeSeries
+	time_series = data['value']['timeSeries']
+
+
+	for number in time_series:
+		print(number['values'][0]['value'][0]['value'])
+
+It's doing pretty good. Gets through a portion of the request but then runs into a "list index out of range" error (fig 4.0). I was running in to something similar with the javascript function I wrote earlier, but there I could step through the data in the browser console. I don't know how to do that in Python. I'm going to try to build an if statement similar to the one I'm using in the javascript.
+
+So, this, I think...
+
+	for number in time_series:
+	if(number['values'][0]['value'][0]['value']){
+		print(number['values'][0]['value'][0]['value'])
+	}
+
+Invalid syntax. Right. Significant whitespace. Not curly brackets. 
+
+Hmm. Still list index out of range. I need to try and step through each level of the json heirarchy and see what I can access. 
+
+1. Dropping ['value'] from the end of the print call still gets the error.
+
+	print(number['values'][0]['value'][0])
+
+2. Dropping the [0] index also still results in the out of range error.
+
+	print(number['values'][0]['value'])
+
+Shit. The error was coming from the if statement, not the line I've been modifying. Read the error messages! (4.1) So, now I'm going back and redoing the tests having removed the if statement. The first test of, 'print(number['values'][0]['value'][0])', again returns the error. The second test of, 'print(number['values'][0]['value'])', runs through everything succesfully!
+
+So the problem lies in trying to access a ['value'] object which is empty. I think I just need to modify that if statement from earlier. I also now realize that my previous if statement didn't actually have a length method or an evaluator. I feel sheepish. 
+
+Success! This works.
+
+	for number in time_series:
+		if(len(number['values'][0]['value']) > 0):
+			print(number['values'][0]['value'][0]['value'])
+
+Let's get the other data to print out and give it labels. 
+
+I'm so close. I can taste it. This...
+
+	for number in time_series:
+	if(len(number['values'][0]['value']) > 0):
+		print('Site Name: ' + number['sourceInfo']['siteName'] + '\n'+ \
+		'Name: ' + number['name'] + '\n' + \
+		'Streamflow Value: ' + number['values'][0]['value'][0]['value']) + '\n' + \
+		'Longitude: ' + number['sourceInfo']['geoLocation']['geogLocation']['longitude'] + '\n' + \
+		'Latitude: ' + number['sourceInfo']['geoLocation']['geogLocation']['latitude']
+
+...gives me the following error:
+
+	Traceback (most recent call last):
+		File "dowser.py", line 25, in <module>
+			'Latitude: ' + number['sourceInfo']['geoLocation']['geogLocation']['latitude']
+	TypeError: unsupported operand type(s) for +: 'NoneType' and 'str'
+
+Figured it out. I had left the parentheses closing the print call at the end of the Streamflow Value argument. Moving it to the end solved that problem, but gave me this one: 
+
+	Traceback (most recent call last):
+	  File "dowser.py", line 25, in <module>
+	    'Latitude: ' + number['sourceInfo']['geoLocation']['geogLocation']['latitude'])
+	TypeError: Can't convert 'float' object to str implicitly
+
+HA! EAT THAT, PYTHON! I mean, I guess I just learned how to use some its syntax, but our relationship right now feels very antagonistic. In any case, it's working. Almost. I'm reading the site name, the USGS name, the streamflow value and longitude/latitude. I needed to format the lat/long floats as strings to print them.
+
+	for number in time_series:
+	if(len(number['values'][0]['value']) > 0):
+		print('Site Name: ' + number['sourceInfo']['siteName'] + '\n' + \
+		'Name: ' + number['name'] + '\n' + \
+		'Streamflow Value: ' + number['values'][0]['value'][0]['value'] + '\n' + \
+		'Longitude: '.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + '\n' + \
+		'Latitude: '.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']))
+
+One problem. I don't actually see those values. Just their labels (4.2). Curious.
+
+[http://www.python-course.eu/python3_formatted_output.php](http://www.python-course.eu/python3_formatted_output.php)
+
+Haiooooo! We're in business (4.3). In the first couple of examples I saw I didn't pay attention to the { } placeholder (or format codes, I suppose). Here's the code:
+
+	for number in time_series:
+	if(len(number['values'][0]['value']) > 0):
+		print('Site Name: ' + number['sourceInfo']['siteName'] + '\n' + \
+		'Name: ' + number['name'] + '\n' + \
+		'Streamflow Value: ' + number['values'][0]['value'][0]['value'] + '\n' + \
+		'Longitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + '\n' + \
+		'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']))
+
+I've spent days on this, wandering through the desert, my throat parching in the bright white-hot heat of a thousand tutorials. I think I see a cool, quenching spring of data on the horizon. Still work to do. Time for coffee.
