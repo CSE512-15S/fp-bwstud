@@ -410,3 +410,120 @@ Haiooooo! We're in business (4.3). In the first couple of examples I saw I didn'
 		'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']))
 
 I've spent days on this, wandering through the desert, my throat parching in the bright white-hot heat of a thousand tutorials. I think I see a cool, quenching spring of data on the horizon. Still work to do. Time for coffee.
+
+How do I retrieve the response, filter it, extracting only the values I've identified so far, and write those to a new file?
+http://runnable.com/Uri5rHtisU8kAA5S/command-the-web-with-python-requests-for-tutorial-beginner-http-scrapping-and-json
+
+After sifting through some less than straightforward information online I've attempted the following. 
+
+	with open('data.json', 'wb') as output:
+		for number in time_series:
+			if(len(number['values'][0]['value']) > 0):
+				output.write('Site Name: ' + number['sourceInfo']['siteName'] + '\n' + \
+				'Name: ' + number['name'] + '\n' + \
+				'Streamflow Value: ' + number['values'][0]['value'][0]['value'] + '\n' + \
+				'Longitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + '\n' + \
+				'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']))
+
+I'm basically trying to replace the print function from earlier with .write() and wrapping the whole thing in a with open() block. I'm unclear as to what the first argument in with open should be, however. My first error is this: 
+	
+	Traceback (most recent call last):
+	  File "dowser.py", line 25, in <module>
+	    'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']))
+	TypeError: 'str' does not support the buffer interface
+
+This is tough.
+
+http://stackoverflow.com/questions/26537592/python3-3-html-client-typeerror-str-does-not-support-the-buffer-interface
+http://stackoverflow.com/questions/26945613/str-does-not-support-the-buffer-interface-python3-from-python2
+http://stackoverflow.com/questions/25826610/typeerror-str-does-not-support-the-buffer-interface-in-3-4-1
+http://stackoverflow.com/questions/5471158/typeerror-str-does-not-support-the-buffer-interface
+
+Progress! Apparently the way strings are handled in Python3 requires that strings be cast as bytes. In Python 2.x literal strings were bytes, but in Python 3.x they're unicode, and need to be encoded. I patched together a couple stack answers and got here. The important bits are that I wrapped everything inside the write method inside a bytes() type-casting and added a second argument to ensure the encoding was UTF-8, because... uhh... someone on the internet said it was a good idea.
+
+	with open('data.json', 'wb') as output:
+		for number in time_series:
+			if(len(number['values'][0]['value']) > 0):
+				output.write(bytes('Site Name: ' + number['sourceInfo']['siteName'] + '\n' + \
+				'Name: ' + number['name'] + '\n' + \
+				'Streamflow Value: ' + number['values'][0]['value'][0]['value'] + '\n' + \
+				'Longitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + '\n' + \
+				'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']), 'UTF-8'))
+
+And lo! data.json was written! (4.4)
+
+It is not, however, valid JSON. I guess I need to add some step where the information is re-processed to constitute JSON.
+
+https://docs.python.org/2/library/json.html
+http://stackoverflow.com/questions/2835559/parsing-values-from-a-json-file-in-python
+http://stackoverflow.com/questions/12309269/write-json-data-to-file-in-python
+https://www.codementor.io/tips/4493721338/how-to-load-parse-json-file-in-python
+http://docs.python-guide.org/en/latest/scenarios/json/
+http://stackoverflow.com/questions/17043860/python-dump-dict-to-json-file
+
+It could be that the .json() method of the requests module is converting the json response data to a dict, which is then being written as is. I'm going to try json.dumps to try and convert back. 
+
+Well. That didn't even work a little.
+
+	Traceback (most recent call last):
+	  File "dowser.py", line 35, in <module>
+	    'Latitude: {}'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']), 'UTF-8'))
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/__init__.py", line 230, in dumps
+	    return _default_encoder.encode(obj)
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/encoder.py", line 192, in encode
+	    chunks = self.iterencode(o, _one_shot=True)
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/encoder.py", line 250, in iterencode
+	    return _iterencode(o, 0)
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/encoder.py", line 173, in default
+	    raise TypeError(repr(o) + " is not JSON serializable")
+	TypeError: b'Site Name: St. John River at Ninemile Bridge, Maine\nName: USGS:01010000:00060:00011\nStreamflow Value: 1190\nLongitude: -69.7155556\nLatitude: 46.70055556' is not JSON serializable
+
+Maybe it's just formatting. Maybe I need to add the brackets and commas to my output to make the extracted values JSON serializable (a hard word to say).
+
+Shit. The incoming data has commas in it.
+
+	TypeError: b'{usgs_name: USGS:01010000:00060:00011, properties: {site_name: St. John River at Ninemile Bridge, Maine,streamflow: 1190,longitude: -69.7155556,latitude: 46.70055556}}' is not JSON serializable
+
+How do I escape a character I don't have yet?
+
+Ugh. I've tried a few things. Yes, formatting was a problem. I've added in double quotes throughout the code manually so that every resulting object is json. Removing the bytes() method allows json.dumps to run, but trying to stick that inside output.write() brings me right back to a type error where str does not support the buffer interface. I need to cast the latitude such that it can be, buffered? I guess? Also, why latitude and not longitude?
+
+	with open('data.json', 'wb') as output:
+		for number in time_series:
+			if(len(number['values'][0]['value']) > 0):
+				output.write(json.dumps('{"usgs_name": ' + '"' + number['name'] + '", "properties": {' + \
+				'"site_name": ' + '"' + number['sourceInfo']['siteName'] + '",' + \
+				'"streamflow": ' + '"' + number['values'][0]['value'][0]['value'] + '",' + \
+				'"longitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + ',' + \
+				'b"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}}', 'UTF-8'))
+
+I separated the json.dumps and outpute.write methods from one another and I'm making progress. The json writes with all these extra \ characters, though. (4.5)
+
+	with open('data.json', 'wb') as output:
+		for number in time_series:
+			if(len(number['values'][0]['value']) > 0):
+				json_data = json.dumps('{"usgs_name": ' + '"' + number['name'] + '", "properties": {' + \
+				'"site_name": ' + '"' + number['sourceInfo']['siteName'] + '",' + \
+				'"streamflow": ' + '"' + number['values'][0]['value'][0]['value'] + '",' + \
+				'"longitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + ',' + \
+				'"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}}')
+				output.write(bytes(json_data, 'UTF-8'))
+
+
+I think I'm double encoding the json. 
+
+I'm getting the data to come through. I couldn't get pritty printing to work and I don't want to invest much more time in it. I'm running the JSON through a validator (4.6) and it's found a problem with the way I was structuring the output. No commas between objects! No root object! I'll have to figure out how to assign unique ID's to different subsets of data down the road, probably as a factor of the time the data was collected, but for now I'm going to make it arbitrary.
+
+	with open('data.json', 'wb') as output:
+		for number in time_series:
+			if(len(number['values'][0]['value']) > 0):
+				json_data = bytes('{"usgs_name": ' + '"' + number['name'] + '", "properties": {' + \
+				'"site_name": ' + '"' + number['sourceInfo']['siteName'] + '",' + \
+				'"streamflow": ' + '"' + number['values'][0]['value'][0]['value'] + '",' + \
+				'"longitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + ',' + \
+				'"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}}', 'UTF-8')
+				#pretty = pprint.pprint(json_data)
+				output.write(json_data)
+
+Oh my god. It's finally valid. It's not perfect. But it's valid. (4.7)
+The for in loop leaves one extra comma in the json. I just need to add a counter of some kind to remove it. Other than that, I think it's lookin' good. Jesus. That was an endeavour. I'm putting this down for the night.
