@@ -527,3 +527,15 @@ I'm getting the data to come through. I couldn't get pritty printing to work and
 
 Oh my god. It's finally valid. It's not perfect. But it's valid. (4.7)
 The for in loop leaves one extra comma in the json. I just need to add a counter of some kind to remove it. Other than that, I think it's lookin' good. Jesus. That was an endeavour. I'm putting this down for the night.
+
+
+5.26.15
+====================================================
+From the infintely patient representatives of the USGS
+http://help.waterdata.usgs.gov/faq/sites/do-station-numbers-have-any-particular-meaning
+http://pubs.usgs.gov/wdr/WDR-WA-03-1/pdf/ADR_F.pdf
+http://water.usgs.gov/osw/streamstats/index.html
+
+5.27.15
+====================================================
+I'm gonna fix that comma real quick.

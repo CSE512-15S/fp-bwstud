@@ -36,13 +36,15 @@ with open('data.json', 'wb') as output:
 	counter = 0
 	for number in time_series:
 		counter+=1
-		
 		if(len(number['values'][0]['value']) > 0): 
 			json_data = bytes('"site": { "properties": { "usgs_name": ' + '"' + number['name'] + '",' + \
 			'"site_name": ' + '"' + number['sourceInfo']['siteName'] + '",' + \
 			'"streamflow": ' + '"' + number['values'][0]['value'][0]['value'] + '",' + \
-			'"longitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + ',' + \
-			'"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}},', 'UTF-8')
+			'"longitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['longitude']) + ',', 'UTF-8')
+			if counter < len(time_series) :
+				json_data = json_data + bytes('"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}},', 'UTF-8')
+			else:
+				json_data = json_data + bytes('"latitude": "{}"'.format(number['sourceInfo']['geoLocation']['geogLocation']['latitude']) + '}}', 'UTF-8')
 			#pretty = pprint.pprint(json_data)
 			if(counter==1):
 				output.write(root + json_data)
