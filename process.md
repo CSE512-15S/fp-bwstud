@@ -539,3 +539,102 @@ http://water.usgs.gov/osw/streamstats/index.html
 5.27.15
 ====================================================
 I'm gonna fix that comma real quick.
+Done. Nice. Now I need to write it to the data directory. Stand by.
+Boom.
+OK. What's next? I should add the dateTime of the collected value and the HUC value. The guys at USGS have advised using HUC to determine wat waterbody a given site belongs to. 
+https://water.usgs.gov/GIS/huc.html
+
+What do I need to do? I need to:
+- Demonstrate a mapping of the NHDPlus flowline data.
+- Figure out how to pull multiple periods of record from the streamflow data in a form that's usable by my d3 code.
+- Prototype the layout for the visualization.
+- Figure out how to map either HUC values, or some other measure to the flowline data and render water bodies with their streamflow
+- 
+
+
+5.28.15
+====================================================
+http://en.wikipedia.org/wiki/North_American_Datum
+http://en.wikipedia.org/wiki/Geodesy
+
+NHDPlus 
+Projection Information
+All vector data in feature class format uses the following projection/coordinate system:
+Projection GEOGRAPHIC
+Datum NAD83
+Zunits NO
+Units DD
+Spheroid GRS1980
+Xshift 0.0000000000
+Yshift 0.0000000000
+All grid datasets (cat, fac, fdr, elev_cm, ext_fac, ext_fdr) for the conterminous U.S. are stored in
+an Albers Equal-Area projection:
+Projection ALBERS
+Datum NAD83
+Zunits 100 for elev_cm, otherwise “NO”
+Units METERS
+Spheroid GRS1980
+Xshift 0.0000000000
+Yshift 0.0000000000
+Parameters
+29 30 0.000 /* 1st standard parallel
+45 30 0.000 /* 2nd standard parallel
+-96 0 0.000 /* central meridian
+23 0 0.000 /* latitude of projection’s origin
+0.00000 /* false easting (meters)
+0.00000 /* false northing (meters) 
+
+I'm trying to render some of the flowline topojson in the browser so I can prototype layout and interactions. I keep getting stuck at the point of loading the data. There's something I don't understand about the syntax. The Let's Make a Map example from Mike Bostock uses the .datum() 
+
+https://github.com/mbostock/d3/wiki/API-Reference
+https://gist.github.com/hugolpz/824446bb2f9bc8cce607
+https://github.com/mbostock/us-rivers
+http://bost.ocks.org/mike/map/
+
+http://water.usgs.gov/osw/streamstats/ssinfo1.html
+http://streamstatsags.cr.usgs.gov/wa_ss/default.aspx?stabbr=wa&dt=1432798306262
+https://water.usgs.gov/GIS/huc.html
+http://pubs.usgs.gov/wsp/wsp2294/
+http://water.usgs.gov/osw/streamstats/Ries-Navigation-Final.pdf
+
+
+I'm not getting anywhere with this. I'm trying a new tack. Bostock's US Rivers map shows, very nearly, what I want to, and uses the same data. I'm reading the source for that project, particularly the topomerge. In the Let's Make a Map example the argument passed to .datum is the object uk.objects.subunits. The structure of my topojson is different and it's messing me up. I know, in principle, that I can just step through the json heirarchy to arrive at the appropriate object. In this case I'm trying to pass the object to .datum().
+
+http://stackoverflow.com/questions/13728402/what-is-the-difference-d3-datum-vs-data
+http://stackoverflow.com/questions/10086167/d3-how-to-deal-with-json-data-structures
+https://github.com/mbostock/d3/wiki/Selections#datum
+
+Aha. See below.
+
+	"Unlike the selection.data method, this method does not compute a join (and thus does not compute enter and exit selections)."
+
+and:
+
+	"The datum method is useful for accessing HTML5 custom data attributes with D3. For example, given the following elements:"
+
+So, in this case I want to append a, "path", for every... what? How is the data referring to the water bodies? And what is the path? Are we talking a polygon meant to represent an entire, distinct waterbody? A group of waterbodies? One edge of a section of a river's third tributary? Yikes. Here's a problem: I have the shapefile for HUC_17 (the PNW) converted to topojson. It would be great to view it's structure. Unfortunately, every time I open it it takes several minutes for Sublime to open the file, then crashes Sublime if I try to interact with it. Hm.
+
+http://stackoverflow.com/questions/23533174/whats-the-difference-between-merge-mesh-and-mergearcs-mesharcs-in-topojson
+http://en.wikipedia.org/wiki/Standard_streams
+http://en.wikipedia.org/wiki/Topology
+
+The topomerge file is written at a level of understanding that I don't have. It's requiring a node filereader, then creating a mesh using process.stdout.write. 
+
+Then this, `if (mesh.length) process.stdout.write("[0]");`, which I don't get. Then, for every item in mesh, for ever line in this index of mesh, so long as 0 is less than its length, pull out the arc and write that to the json.
+
+Then there's a reverse function for when index is less than 0, somehow. 
+
+Then there's a function, 'absolute', which takes the argument, 'relative', and a function, 'relative', which takes the argument, 'absolute'.
+
+Huh. I just typed node into the command line. Turns out node offers you a REPL. I guess I should have known that. 
+
+https://nodejs.org/api/repl.html
+https://github.com/mbostock/topojson/wiki/API-Reference#mesh
+https://www.npmjs.com/package/stream-handbook
+
+I can't work with this json file at all. I can't copy it into the browser, it kills the browser. It's actually not as big as I thought. It's only 42.1MB. That doesn't seem that big.
+
+How can I get the damn flowlines to show up in the browser!
+
+https://gist.github.com/mbostock/5557726
+http://stackoverflow.com/questions/25062902/path-not-showing-in-d3-js-topojson-graph
