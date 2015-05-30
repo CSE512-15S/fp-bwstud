@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html class="no-js" lang="">
+<head>
+	<meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title></title>
+    <script src="vendor/d3.min.js"></script>
+		<script src="http://d3js.org/topojson.v1.min.js"></script>
+		<script type="text/javascript" src="build/js/all.min.js"></script>
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+
+
+    </style>
+</head>
+    <body>
+    <script>
+        var width = 960;
+        var height = 1120;
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        var projection = d3.geo.albers()
+                .scale(1100);
+
+        var path = d3.geo.path().projection(projection);
+
+        d3.json("./data/HUC_17.topo.json", function(error, topology) {
+            console.log(topology);
+
+            svg.selectAll("path")
+                    .data(topojson.feature(topology, topology.objects.NHDFlowline).features)    
+                    .enter()
+                    .append("path")
+                    .attr("d", path);
+
+        });
+    </script>
+    </body>
+</html>

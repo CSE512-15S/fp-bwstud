@@ -21,7 +21,6 @@ var paths = {
 gulp.task('watch', function() {
     gulp.watch(paths.scripts, ['js']);
     gulp.watch(paths.styles, ['sass']);
-    gulp.watch(paths.images, ['images']);
     gulp.watch("./*.html").on('change', reload);
 });
 
@@ -35,7 +34,7 @@ gulp.task('browser-sync', function() {
 
 
 gulp.task('sass', function(){
-	gulp.src(paths.styles)
+	return gulp.src(paths.styles)
 		.pipe(plumber())
 		.pipe(sourcemaps.init())
 		.pipe(sass().on('error', sass.logError))
@@ -56,11 +55,8 @@ gulp.task('js', function(){
   		.pipe(gulp.dest('build/js'))
 		.pipe(rename('all.min.js'))
 		.pipe(uglify())
-		.pipe(gulp.dest('build/js'));
+		.pipe(gulp.dest('build/js'))
+		.pipe(reload({stream: true}));
 });
 
-
-
-
-
-gulp.task('default', ['sass', 'js', 'browser-sync','watch']);
+gulp.task('default', ['sass', 'js', 'browser-sync', 'watch']);

@@ -638,3 +638,121 @@ How can I get the damn flowlines to show up in the browser!
 
 https://gist.github.com/mbostock/5557726
 http://stackoverflow.com/questions/25062902/path-not-showing-in-d3-js-topojson-graph
+https://github.com/mbostock/d3/wiki/Geo-Paths
+
+5.28.15
+====================================================
+Fuck. I was working this morning and browser-sync kept disconnecting. I tried to fiddle with a few things and now I've butchered my gulpfile, app.js, and index.html. Salvage mode, engage.
+
+Everything is back the way it was, but every time I reload the page it crashes after a few seconds. See fig 5.0. Not good.
+
+Now I'm getting two errors.
+
+	Failed to load resource: the server responded with a status of 404 (Not Found)
+
+and
+
+	Error: getTranslators: detection is already running at chrome-extension://ekhagklcjbdpajgpjgmbionohlpdbjgc/zotero/translation/translate.js:1023
+
+I disabled the Zotero extension. It's an open source helper which allows you to save references and citations as you collect research. I doubt it's actually at fault here, but just in case. 
+
+I reran gulp and, as expected, the Zotero error is gone, but I'm still failing to load the browser-sync-client. Wierd.
+
+My package.json requires version 2.7.6:
+
+	"devDependencies": {
+	    "browser-sync": "^2.7.6",
+	    "gulp": "^3.8.11",
+	    "gulp-autoprefixer": "^2.3.0",
+	    "gulp-concat": "^2.5.2",
+	    "gulp-minify-css": "^1.1.1",
+	    "gulp-plumber": "^1.0.1",
+	    "gulp-rename": "^1.2.2",
+	    "gulp-sass": "^2.0.1",
+	    "gulp-sourcemaps": "^1.5.2",
+	    "gulp-uglify": "^1.2.0",
+	    "gulp-watch": "^4.2.4"
+	  }
+
+But running browser-sync --version returns 2.7.1, and the error message I'm getting shows Chrome looking for 2.7.3
+
+I'm going to remove the node_modules directory entirely and reinstall everything.
+
+Also, I'm not sure if it's related, but there's a wierd delay when I switch to the browser window and try to open the Chrome inspector with alt+command+i. It's usually immediate. 
+
+OOOOOookkk. I had to clear my browser cache because it had stored the HTML calling for the old version. That was dumb.
+
+And, the browser page is crashing again... :(
+
+I've commented out this portion of my d3.json code and the page seems to stay alive.
+
+	// var flowlines = topojson.feature(topology, topology.objects.NHDFlowline).features;
+	// var bounds = d3.geo.bounds(flowlines);
+	// var centerX = d3.sum(bounds, function(d) {return d[0];}) / 2,
+	// 	centerY = d3.sum(bounds, function(d) {return d[1];}) / 2;
+
+Here's the question now. Why, if I'm running this code, is there no svg element in my elements panel on the page?
+	
+	var svg = d3.select('body').append('svg')
+		.attr("width", width)
+	    .attr("height", height);
+
+	 var projection = d3.geo.albers()
+		// .center([centerX, centerY])
+	    .scale(1100);
+
+	var path = d3.geo.path().projection(projection);   
+
+    d3.json("./data/HUC_17.topo.json", function(error, topology) {
+		if (error) return console.error(error);
+		console.log(topology);
+
+		svg.selectAll("path")
+			.data(topojson.feature(topology, topology.objects.NHDFlowline).features)  	
+			.enter()
+			.append("path")
+			.attr("d", path);
+
+	});
+
+
+I'm not finding anything to help me here...
+I look in the inspector and no SVG. I can manually add an SVG from the console. wtf.
+
+So, on a hunch I built a test page without any of the build process stuff. No Gulp. No Browser-Sync. Just an html file with a script at the bottom of the body tag:
+
+	var width = 960;
+    var height = 1120;
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var projection = d3.geo.albers()
+            .scale(1100);
+
+    var path = d3.geo.path().projection(projection);
+
+    d3.json("./data/HUC_17.topo.json", function(error, topology) {
+        console.log(topology);
+
+        svg.selectAll("path")
+                .data(topojson.feature(topology, topology.objects.NHDFlowline).features)    
+                .enter()
+                .append("path")
+                .attr("d", path);
+
+    });
+
+And I'll be damned but the thing actually showed up. There's something about using the build that messes up my work. For the time being I suppose I'm just going to go without the build. I am, however, now facing the problem of brower crashing again. After rendering for a few seconds it kills the page. I think it might be because of the size of what I'm trying to render? No, it's because I'm still trying to access this through browser-sync which is still running on the other page. Shutting it down and switching to simple python server.
+
+Ok! Confirmed. It's not browser-sync's fault. It's still happening.
+
+https://github.com/mapbox/mapbox-gl-js/issues/844
+
+Best guess is that it's a simple fact of the file being too big. I'm not sure what to do. I'm going to go eat something.
+
+https://www.mapbox.com/mapbox-gl-js/api/
+
+
+
