@@ -13,14 +13,19 @@
 <body>
 
 <div id='map'></div>
+
 <script>
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiYndzdHVkIiwiYSI6ImQ2ZTJlMTdjODMwNGJhZjlmOWM5MTY2NzZhYmY1YmIwIn0.fDkR66VlhLh5BHk6f1MeIA';
+
 var map = new mapboxgl.Map({
   container: 'map', // container id
   style: 'https://www.mapbox.com/mapbox-gl-styles/styles/outdoors-v7.json', //stylesheet location
   center: [40, -74.50], // starting position
-  zoom: 9 // starting zoom
+  zoom: 5,// starting zoom
+  hash: true 
 });
+
 </script>
 
 </body>

@@ -1,6 +1,14 @@
 var width = 960;
 var height = 1120;
 
+var map = new mapboxgl.Map({
+    container: 'map',
+    center: [37.772537, -122.420679],
+    zoom: 13,
+    style: style_object,
+    hash: true
+});
+
 var svg = d3.select("body").append("svg")
 	.attr("width", width)
     .attr("height", height);
@@ -33,8 +41,11 @@ d3.json("./data/test_pretty.json", function(error, sites){
     }})
     .enter()
 	.append("circle")
-	.attr("cx", function(d, i){return 2 * i})
+	.attr("cx", function(d, i){return 2 * i;})
 	.attr("cy", 100)
-	.attr("text", function(d){return d});
+	.attr("text", function(d){
+		return d;
+		}	
+	);
     
-});
+});	

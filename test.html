@@ -25,13 +25,42 @@
             .attr("width", width)
             .attr("height", height);
 
-        var projection = d3.geo.albers()
-                .scale(1100);
+        // var projection = d3.geo.albers()
+        //         .scale(2100);
 
-        var path = d3.geo.path().projection(projection);
+        // var path = d3.geo.path().projection(projection);
+
+        // var b = path.bounds(feature),
+        //     s = 0.95 / Math.max(
+        //                    (b[1][0]-b[0][0])/width, 
+        //                    (b[1][1]-b[0][1])/height
+        //                );
+        //     b = d3.geo.bounds(feature);
+        //     projection.center([(b[1][0]+b[0][0])/2, (b[1][1]+b[0][1])/2]);
+        //     projection.translate([width/2, height/2]);
 
         d3.json("./data/HUC_17.topo.json", function(error, topology) {
             console.log(topology);
+
+            var center = d3.geo.centroid(topology)
+            var scale  = 1500;
+            var offset = [width/2, height/2];
+            var projection = d3.geo.mercator().scale(scale).center(center)
+                .translate(offset);
+
+            var path = d3.geo.path().projection(projection);
+
+            var bounds  = path.bounds(topology);
+            var hscale  = scale*width  / (bounds[1][0] - bounds[0][0]);
+            var vscale  = scale*height / (bounds[1][1] - bounds[0][1]);
+            var scale   = (hscale < vscale) ? hscale : vscale;
+            var offset  = [width - (bounds[0][0] + bounds[1][0])/2,
+                height - (bounds[0][1] + bounds[1][1])/2];   
+
+            projection = d3.geo.mercator().center(center)
+                .scale(scale).translate(offset);
+            path = path.projection(projection);
+
 
             svg.selectAll("path")
                     .data(topojson.feature(topology, topology.objects.NHDFlowline).features)    
