@@ -23,6 +23,7 @@
     "gulp-watch": "^4.2.4"
   },
   "dependencies": {
-    "geojson-vt": "^2.0.0"
+    "geojson-vt": "^2.0.0",
+    "pathgl": "^0.1.1"
   }
 }

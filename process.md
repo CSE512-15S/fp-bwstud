@@ -871,7 +871,7 @@ https://github.com/mapbox/tilelive.js
 https://github.com/mapbox/node-mbtiles
 https://github.com/spatialdev/PGRestAPI
 
-I'm following some of theprocedures here: https://www.mapbox.com/guides/converting-thousands-points-to-vts/ 
+I'm following some of the procedures here: https://www.mapbox.com/guides/converting-thousands-points-to-vts/ 
 I removed a few columns from my shapefile properties (kept a backup). The info seems to be rendering much faster in mapbox studio. Now I'm trying to upload to mapbox.com. We'll see what happens (fig 6.7).
 
 5.31.15
@@ -1343,3 +1343,102 @@ http://postgis.net/docs/manual-1.3/ch03.html#id434623
 	flowlines=# VACUUM ANALYZE nhdflowine
 
 Now my eyes hurt and I've been up too late. I'm out.
+
+6.3.15
+====================================================
+Because I removed some columns from the HUC 17 data in an effort to reduce its size I'm going to reinstall it. I preserved a version of the original shapefile, but didn't take into account that QGIS would alter the dbf and possibly others. I've gotten some (limited) advice back from Mapbox help, and the lead contributor of Tippecanoe actually just commited code to automatically constrain file size to the 500k limit in processing, so I'm going to give that a go. In the process now of re-downloading and unpacking the NHDPlus data.
+
+That worked! Cool. But I did it wrong. I got the data up to Mapbox, but when I try to style it in Mapbox studio it doesn't show up. 
+
+Something's been bothering me about Mapbox. I'm not sure how well it handles the kind of interactivity I'm trying to do. I found a library that combines D3 and WebGL
+http://pathgl.com/documentation/start.html
+
+Maybe that would allow me to use D3, which I'm more comfortable with, while still getting the render performance of WebGL.
+
+https://vis4.net/blog/posts/no-more-mercator-tiles/
+http://engineering.ayasdi.com/2015/01/09/converting-a-d3-visualization-to-webgl-how-and-why/
+http://zevross.com/blog/2014/09/30/use-the-amazing-d3-library-to-animate-a-path-on-a-leaflet-map/
+http://nyctaxi.herokuapp.com/
+https://www.mapbox.com/mapbox-gl-js/api/
+https://www.mapbox.com/mapbox.js/example/v1.0.0/timeline-scaled-markers/
+http://codepen.io/smhigley/pen/BJAzC
+http://www.crmarsh.com/svg-performance/
+http://projects.delimited.io/experiments/threejs-maps/d3-map-example.html
+https://github.com/cambecc/earth
+http://blog.cartodb.com/cartodb-makes-d3-maps-a-breeze/
+https://github.com/tilemapjp/mbtiles.js
+http://bost.ocks.org/mike/simplify/
+https://www.mapbox.com/mapbox.js/example/v1.0.0/animating-flight-paths/
+https://www.mapbox.com/mapbox.js/example/v1.0.0/sync-layer-movement/
+https://www.mapbox.com/mapbox.js/example/v1.0.0/swipe-layers/
+http://cityhubla.github.io/LA_Building_Age/#12/34.0267/-118.2621
+http://www.citylab.com/design/2014/10/mapping-the-age-of-every-building-in-manhattan/381676/
+
+
+Just sent this:
+
+Hi Lyzi,
+
+I figured out how to work with mbtiles in MB Studio. I didn't know you needed to copy a url into the field at the bottom of the change source dialogue. 
+
+I'm floundering a bit over here, and was wondering if I might pick your brain even more. My big stretch goal is to render a view of the rivers and streams in the PNW (HUC 17) with some animated element (particle, stroke, gradient, something...)  indicating streamflow. This could be diverging from an average point, or mapped along an absolute scale, or something else entirely. Here is n example varying width by flow. Here is a piece showing wind across the earth inspired by the famous windmap by Martin Wattenburg and Fernanda Viegas. Two projects I've been learning a great deal from are Nelson Minar's Vector River Map, and Mike Bostock's subsequent reinterpretation. That would be composed of:
+
+1) River map - The NHDPlus data (Geospatial).
+2) Streamflow measurement collection sites - USGS Water Web Services data (Geospatial).
+3) Streamflow values by day dating back to October 2007 - USGS Water Web Services data (Numeric).
+
+Within that graphic I would like to provide a brush, which the viewer could use to dynamically select a group of sites for closer view.
+Below that I hope to include a control for scrubbing through a time range. 
+The site values selected by the brush will be plotted in a secondary graphic with the x-axis representing time, and the y-axis representing streamflow volume. Multiple lines will occupy that view, depending on the selection.
+
+Imagine a dense, high-level overview of the river networks in Washington, Oregon and Idaho, pulsing in relation to the water passing through their land. As you move a box around this map, every marker it captures creates a new graph line in a smaller graphic below, and as the box moves beyond the marker, it's paired line is also removed. Controls allow you to view a week, two weeks, perhaps a month at a time of data points for the selected region.
+
+That's where I'd like to get. I simply don't know if Mapbox is the right tool to be working with. In parallel, I've also entered the data into a PostGIS database so I might explore serving the tiles with another tool. I had originally attempted to render TopoJSON with D3 straight into the browser. Needless to say, the file was too large. For the last few days I've been scrambling around trying to figure out what combination of technologies I should use to build this thing. What I know so far is the following:
+
+- D3 is powerful, but SVG isn't suited to rendering something this dense. 
+- Various vector tiling approaches can be employed to divide the relevant data into manageable chunks.
+- Vector tiles need to be stored in a database where they are queried and served based on user input.
+- There are a number of possible solutions for serving vector tiles.
+- WebGL also offers a performance advantage over SVG in rendering large datasets.
+- Mapbox provides a tool for viewing and styling vector tile data, as well as libraries for interactive mapping.
+- MapboxGL does that with WebGL
+- To make things more complicated, there's a library called pathgl which converts D3 selections to WebGL accessible buffers.
+
+This example proves to me that I can link the map layer to a secondary graphic.
+This example proves to me that I can scrub through time and include a D3 visualization alongside the map.
+This example proves to me that I can animate features of the map.
+and These Examples suggest to me that with appropriate preparation, a large dataset shouldn't be an obstacle.
+
+Any advice you can offer me to help sort this out would be tremendously appreciated. I know that's a long email, so I thank you for bearing with me. Even pointing me in the direction of someone who might be a better person to ask would be great!
+
+Thanks so much,
+Brian
+
+
+OK. I feel like I've gotten way off course here. I have less than three days til the poster is due and no visualization. I'm going to reign it in and refocus on the Python script to acquire my data.
+
+OBJECTIVE: Obtain streamflow data for all active sites in HUC 17, grouped by data, going back to October 2007.
+
+First. How can I snag the flow data and split it by day?
+
+Whoa. This is cool. http://www.mapshaper.org/
+
+
+
+6.4.15
+====================================================
+http://blogs.esri.com/esri/arcgis/2012/01/31/stream-tapering-adds-realism-to-your-map/
+
+GeoJSON Utilities
+https://github.com/tmcw/awesome-geojson
+
+https://github.com/tmcw/vector-river-gl
+
+Yakima Basin River flows and spring chinook downstream migration in 2005,
+https://www.youtube.com/watch?v=untc1iCqF-I
+
+Getting Real: Reflecting on the New Look of National Park Service Maps
+http://www.shadedrelief.com/realism/index.html
+
+Proportional vs Graduated Symbols 
+http://blogs.esri.com/esri/arcgis/2008/05/03/u-s-hydro-flow-lines/

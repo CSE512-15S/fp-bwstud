@@ -3,25 +3,27 @@
 import requests
 import json
 
-hucs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+# hucs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 # declare request url, generated from USGS web services
 #urls='http://waterservices.usgs.gov/nwis/iv/?format=json&huc=01&period=P3D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active'
 
+# daily values URL 
+url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2007-10-01&endDT=2015-06-04&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
 
 # declare header for gzip compression
 # headers={'Accept-Encoding': 'gzip, compress'}
 
 # create parameters dict to pass to url
-payload = {'indent': 'on'}
+# payload = {'indent': 'on'}
 
-for huc in hucs:
+# for huc in hucs:
 # create request as json
-#data = requests.get(url, headers=headers, stream=True).json()
-	if(huc < 10):
-		data = requests.get('http://waterservices.usgs.gov/nwis/iv/?format=json&indent=on&huc=0{}&startDT=2015-05-22&endDT=2015-05-23&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS'.format(huc), stream=True).json()	 
-	else:
-		data = requests.get('http://waterservices.usgs.gov/nwis/iv/?format=json&indent=on&huc={}&startDT=2015-05-22&endDT=2015-05-23&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS'.format(huc), stream=True).json()
+data = requests.get(url, headers=headers, stream=True).json()
+	# if(huc < 10):
+	# 	data = requests.get('http://waterservices.usgs.gov/nwis/iv/?format=json&indent=on&huc=0{}&startDT=2015-05-22&endDT=2015-05-23&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS'.format(huc), stream=True).json()	 
+	# else:
+	# 	data = requests.get('http://waterservices.usgs.gov/nwis/iv/?format=json&indent=on&huc={}&startDT=2015-05-22&endDT=2015-05-23&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS'.format(huc), stream=True).json()
 			 
 	# access timeSeries
 	time_series = data['value']['timeSeries']
