@@ -49,3 +49,5 @@ with open('data/data.json', 'wb') as output:
 				output.write(json_data)
 # close the json object				
 	output.write(bytes('}}', 'UTF-8'))
+
+	

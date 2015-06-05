@@ -1463,3 +1463,516 @@ Nevermind. It crashes every time I try to open the file menu. (fig 8.1)
 Notes from a meeting between The California State Water Atlas and Stamen Design, referencing Plus Flowline VAA for stream order.
 http://ca.statewater.org/content/first-meeting-stamen-new-california-water-atlas
 
+I am very sad I didn't find this book sooner:
+http://www.archive.org/stream/The_California_Water_Atlas/5788000#page/n69/mode/2up
+
+Interesting project with steps, but no instructions
+https://code.env.duke.edu/projects/fay/wiki/EEP
+
+Nelson Minar's notes on grouping criteria in the NHDPlus data, including information about flowline, flowline attributes, and reachcode/gnis_id/strahler
+
+OK, I'm running this request right now:
+
+	#libs
+	import requests
+	import json
+
+	# daily values request url, generated from USGS web services
+	url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2007-10-01&endDT=2015-06-04&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+	# create request as json
+	r = requests.get(url)
+
+	#deserialize so I can manipulate the data prior to writing it to a file
+	data = r.json()
+
+	#reserialize the content and write it to 'data.json'
+	with open('data.json', 'w') as f:
+		json.dump(data, f)		
+
+Watching this [State of Vector Tiles](https://2015.foss4g-na.org/comment/360#comment-360) talk from FOSS4G 2015 while I wait
+Mapnik is the rendering engine of mapbox http://mapnik.org/
+
+Ok, the request went through. Took about 7 minutes. Let's take a look.
+
+Way huge. 2.6GB. I'm trying to pull out a small part of it to look at. I just ran a query with a time period of 06/02/15-06/04-15. I'm looking at that to figure out the structure. 99% of this is manky junk. I'm working out how to process the data in my request, and to do so I need to see how to step through the json. Rather than load it into the browser and use the console as I was previously, this is a very convenient json [formatter and validator](http://jsonformatter.curiousconcept.com/) which allows me to collapse sections of the data. Much better than trying to track curly brace indenting manually. (fig 8.3)
+
+The data is, again, in a {"value":{"timeSeries:[]"}} structure.
+
+	{  
+	   "value":{  
+	      "queryInfo":{  },
+	      "timeSeries":[  
+	         {  
+	            "sourceInfo":{  },
+	            "variable":{  },
+	            "values":[  ],
+
+	         }
+
+From the Python [docs](https://docs.python.org/2/tutorial/inputoutput.html):
+open() returns a file object, and is most commonly used with two arguments: open(filename, mode).
+The first argument is a string containing the filename. The second argument is another string containing a few characters describing the way in which the file will be used. mode can be 'r' when the file will only be read, 'w' for only writing (an existing file with the same name will be erased), and 'a' opens the file for appending; any data written to the file is automatically added to the end. 'r+' opens the file for both reading and writing. The mode argument is optional; 'r' will be assumed if it’s omitted.
+
+First draft:
+
+	#lib
+	import json
+
+	#open json file
+	with open('lildata.json', 'a') as f:
+
+		#declare time-series variable which gets us a two layers deep in the json response object
+		timeSeries = f['value']['timeSeries']
+
+		#extract the vlaues we care about, assigning them readable keys 
+
+		for entry in timeSeries:
+		    new_json = bytes('streamflow_ft3/s: ' + entry['values'][0]['value']['value'], 'UTF-8')
+		    f.write(new_json)
+
+Result:
+
+	D-128-95-62-7:pyscripts bwstud$ python3 test_filter.py
+	Traceback (most recent call last):
+	  File "test_filter.py", line 8, in <module>
+	    timeSeries = f['value']['timeSeries']
+	TypeError: '_io.TextIOWrapper' object is not subscriptable
+
+fix 1
+
+	with open('lildata.json', 'r+') as f:
+		data = json.load(f)
+
+I ran
+
+	#lib
+	import json
+
+	#open json file
+	with open('lildata.json', 'r+') as f:
+		data = json.load(f)
+
+		#declare time-series variable which gets us a two layers deep in the json response object
+		timeSeries = data['value']['timeSeries']
+
+		#extract the vlaues we care about, assigning them readable keys 
+
+		for entry in timeSeries:
+		    new_json = bytes('streamflow_ft3/s: ' + entry['values'][0]['value']['value'], 'UTF-8')
+		    data.write(new_json)
+
+and got 
+
+	D-128-95-62-7:pyscripts bwstud$ python3 test_filter.py 
+	Traceback (most recent call last):
+	  File "test_filter.py", line 6, in <module>
+	    data = json.load(f)
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/__init__.py", line 265, in load
+	    return loads(fp.read(),
+	io.UnsupportedOperation: not readable
+
+Fix 2, change the file mode to r+
+
+I got
+
+	D-128-95-62-7:pyscripts bwstud$ python3 test_filter.py 
+	Traceback (most recent call last):
+	  File "test_filter.py", line 14, in <module>
+	    new_json = bytes('streamflow_ft3/s: ' + entry['values'][0]['value']['value'], 'UTF-8')
+	TypeError: list indices must be integers, not str
+
+	>>> import json
+	>>> with open('data.json', 'r+') as f:
+	...     data = json.load(f)
+	...     timeSeries = data['value']['timeSeries'][0]
+	...     print (timeSeries.keys())
+	... 
+	Traceback (most recent call last):
+	  File "<stdin>", line 2, in <module>
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/__init__.py", line 265, in load
+	    return loads(fp.read(),
+	OSError: [Errno 22] Invalid argument
+	>>> with open('data.json', 'r+') as f:
+	...     data = json.load(f)
+	...     print(data.keys())
+	... 
+	Traceback (most recent call last):
+	  File "<stdin>", line 2, in <module>
+	  File "/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/lib/python3.4/json/__init__.py", line 265, in load
+	    return loads(fp.read(),
+	OSError: [Errno 22] Invalid argument
+	>>> import os
+	>>> os getcwd
+	  File "<stdin>", line 1
+	    os getcwd
+	            ^
+	SyntaxError: invalid syntax
+	>>> os.getcwd 
+	<built-in function getcwd>
+	>>> os.getcwd()
+	'/Users/bwstud/Projects/cse512/fp-bwstud/pyscripts'
+
+I'm running out of time. This is bad. 
+
+http://stackoverflow.com/questions/16168863/i-get-error-after-simple-try-to-store-json
+
+
+I'm just getting royally screwed. The python script I wrote to handle instantaneous values (the values collected every 15 minutes), didn't work for the data the daily values returns. I've spent all fucking night trying to figure out how to deal with this daily values data. If I could get the daily values data I could at least plot markers on a map which would possess per-day streamflow volumes which I could then bind to graphics.
+
+	>>> data['value']['timeSeries'][0]['values'].keys()
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	AttributeError: 'list' object has no attribute 'keys'
+
+http://stackoverflow.com/questions/23190074/python-dictionary-error-attributeerror-list-object-has-no-attribute-keys
+
+	>>> values = data['value']['timeSeries'][0]['values']
+	>>> for i in values:
+	...     print(values[i])
+	... 
+	Traceback (most recent call last):
+	  File "<stdin>", line 2, in <module>
+	TypeError: list indices must be integers, not dict
+	>>> 
+
+aha.
+
+	>>> print(values[0].keys())
+	dict_keys(['value', 'qualifier', 'method', 'censorCode', 'units', 'sample', 'source', 'offset', 'qualityControlLevel'])
+
+http://stackoverflow.com/questions/26266425/typeerror-list-indices-must-be-integers-not-dict
+
+Better:
+
+	>>> for i in values:
+	>>>     print(i['value'])
+
+Less better
+
+	>>> for i in values:
+	...     print(i['value'].keys())
+	... 
+	Traceback (most recent call last):
+	  File "<stdin>", line 2, in <module>
+	AttributeError: 'list' object has no attribute 'keys'
+
+Warmer...
+
+	>>> print(values[0]['value'][0])
+	{'codedVocabulary': None, 'offsetTypeID': None, 'sampleID': None, 'accuracyStdDev': None, 'offsetValue': None, 'dateTimeAccuracyCd': None, 'qualityControlLevelCode': None, 'dateTimeUTC': None, 'methodCode': None, 'qualifiers': ['P', 'e'], 'timeOffset': None, 'methodID': None, 'sourceID': None, 'oid': None, 'offsetTypeCode': None, 'value': '30', 'sourceCode': None, 'labSampleCode': None, 'codedVocabularyTerm': None, 'metadataTime': None, 'censorCode': None, 'dateTime': '2015-01-01T00:00:00.000-05:00'}
+  
+Warmer...
+
+	>>> for i in values[0]['value']:
+	>>>     print(i.keys())
+
+	dict_keys(['codedVocabulary', 'offsetTypeID', 'sampleID', 'accuracyStdDev', 'offsetValue', 'dateTimeAccuracyCd', 'qualityControlLevelCode', 'dateTimeUTC', 'methodCode', 'qualifiers', 'timeOffset', 'methodID', 'sourceID', 'oid', 'offsetTypeCode', 'value', 'sourceCode', 'labSampleCode', 'codedVocabularyTerm', 'metadataTime', 'censorCode', 'dateTime'])
+
+So close, and yet, so far. Where are the streamflow measures!?
+
+	>>> for i in values[0]['value']:
+	>>>     print(i['dateTime'])
+
+	2015-01-01T00:00:00.000-05:00
+	2015-01-02T00:00:00.000-05:00
+	2015-01-03T00:00:00.000-05:00
+	2015-01-04T00:00:00.000-05:00
+	2015-01-05T00:00:00.000-05:00
+	2015-01-06T00:00:00.000-05:00
+	2015-01-07T00:00:00.000-05:00
+	2015-01-08T00:00:00.000-05:00
+	2015-01-09T00:00:00.000-05:00
+	2015-01-10T00:00:00.000-05:00
+	2015-01-11T00:00:00.000-05:00
+	2015-01-12T00:00:00.000-05:00
+	2015-01-13T00:00:00.000-05:00
+	2015-01-14T00:00:00.000-05:00
+	2015-01-15T00:00:00.000-05:00
+	2015-01-16T00:00:00.000-05:00
+	2015-01-17T00:00:00.000-05:00
+	2015-01-18T00:00:00.000-05:00
+	2015-01-19T00:00:00.000-05:00
+	2015-01-20T00:00:00.000-05:00
+	2015-01-21T00:00:00.000-05:00
+	2015-01-22T00:00:00.000-05:00
+	2015-01-23T00:00:00.000-05:00
+	2015-01-24T00:00:00.000-05:00
+	2015-01-25T00:00:00.000-05:00
+	2015-01-26T00:00:00.000-05:00
+	2015-01-27T00:00:00.000-05:00
+	2015-01-28T00:00:00.000-05:00
+	2015-01-29T00:00:00.000-05:00
+	2015-01-30T00:00:00.000-05:00
+	2015-01-31T00:00:00.000-05:00
+	2015-02-01T00:00:00.000-05:00
+	2015-02-02T00:00:00.000-05:00
+	2015-02-03T00:00:00.000-05:00
+	2015-02-04T00:00:00.000-05:00
+	2015-02-05T00:00:00.000-05:00
+	2015-02-06T00:00:00.000-05:00
+	2015-02-07T00:00:00.000-05:00
+	2015-02-08T00:00:00.000-05:00
+	2015-02-09T00:00:00.000-05:00
+	2015-02-10T00:00:00.000-05:00
+	2015-02-11T00:00:00.000-05:00
+	2015-02-12T00:00:00.000-05:00
+	2015-02-13T00:00:00.000-05:00
+	2015-02-14T00:00:00.000-05:00
+	2015-02-15T00:00:00.000-05:00
+	2015-02-16T00:00:00.000-05:00
+	2015-02-17T00:00:00.000-05:00
+	2015-02-18T00:00:00.000-05:00
+	2015-02-19T00:00:00.000-05:00
+	2015-02-20T00:00:00.000-05:00
+	2015-02-21T00:00:00.000-05:00
+	2015-02-22T00:00:00.000-05:00
+	2015-02-23T00:00:00.000-05:00
+	2015-02-24T00:00:00.000-05:00
+	2015-02-25T00:00:00.000-05:00
+	2015-02-26T00:00:00.000-05:00
+	2015-02-27T00:00:00.000-05:00
+	2015-02-28T00:00:00.000-05:00
+	2015-03-01T00:00:00.000-05:00
+	2015-03-02T00:00:00.000-05:00
+	2015-03-03T00:00:00.000-05:00
+	2015-03-04T00:00:00.000-05:00
+	2015-03-05T00:00:00.000-05:00
+	2015-03-06T00:00:00.000-05:00
+	2015-03-07T00:00:00.000-05:00
+	2015-03-08T00:00:00.000-05:00
+	2015-03-09T00:00:00.000-04:00
+	2015-03-10T00:00:00.000-04:00
+	2015-03-11T00:00:00.000-04:00
+	2015-03-12T00:00:00.000-04:00
+	2015-03-13T00:00:00.000-04:00
+	2015-03-14T00:00:00.000-04:00
+	2015-03-15T00:00:00.000-04:00
+	2015-03-16T00:00:00.000-04:00
+	2015-03-17T00:00:00.000-04:00
+	2015-03-18T00:00:00.000-04:00
+	2015-03-19T00:00:00.000-04:00
+	2015-03-20T00:00:00.000-04:00
+	2015-03-21T00:00:00.000-04:00
+	2015-03-22T00:00:00.000-04:00
+	2015-03-23T00:00:00.000-04:00
+	2015-03-24T00:00:00.000-04:00
+	2015-03-25T00:00:00.000-04:00
+	2015-03-26T00:00:00.000-04:00
+	2015-03-27T00:00:00.000-04:00
+	2015-03-28T00:00:00.000-04:00
+	2015-03-29T00:00:00.000-04:00
+	2015-03-30T00:00:00.000-04:00
+	2015-03-31T00:00:00.000-04:00
+	2015-04-01T00:00:00.000-04:00
+	2015-04-02T00:00:00.000-04:00
+	2015-04-03T00:00:00.000-04:00
+	2015-04-04T00:00:00.000-04:00
+	2015-04-05T00:00:00.000-04:00
+	2015-04-06T00:00:00.000-04:00
+	2015-04-07T00:00:00.000-04:00
+	2015-04-08T00:00:00.000-04:00
+	2015-04-09T00:00:00.000-04:00
+	2015-04-10T00:00:00.000-04:00
+	2015-04-11T00:00:00.000-04:00
+	2015-04-12T00:00:00.000-04:00
+	2015-04-13T00:00:00.000-04:00
+	2015-04-14T00:00:00.000-04:00
+	2015-04-15T00:00:00.000-04:00
+	2015-04-16T00:00:00.000-04:00
+	2015-04-17T00:00:00.000-04:00
+	2015-04-18T00:00:00.000-04:00
+	2015-04-19T00:00:00.000-04:00
+	2015-04-20T00:00:00.000-04:00
+	2015-04-21T00:00:00.000-04:00
+	2015-04-22T00:00:00.000-04:00
+	2015-04-23T00:00:00.000-04:00
+	2015-04-24T00:00:00.000-04:00
+	2015-04-25T00:00:00.000-04:00
+	2015-04-26T00:00:00.000-04:00
+	2015-04-27T00:00:00.000-04:00
+	2015-04-28T00:00:00.000-04:00
+	2015-04-29T00:00:00.000-04:00
+	2015-04-30T00:00:00.000-04:00
+	2015-05-01T00:00:00.000-04:00
+	2015-05-02T00:00:00.000-04:00
+	2015-05-03T00:00:00.000-04:00
+	2015-05-04T00:00:00.000-04:00
+	2015-05-05T00:00:00.000-04:00
+	2015-05-06T00:00:00.000-04:00
+	2015-05-07T00:00:00.000-04:00
+	2015-05-08T00:00:00.000-04:00
+	2015-05-09T00:00:00.000-04:00
+	2015-05-10T00:00:00.000-04:00
+	2015-05-11T00:00:00.000-04:00
+	2015-05-12T00:00:00.000-04:00
+	2015-05-13T00:00:00.000-04:00
+	2015-05-14T00:00:00.000-04:00
+	2015-05-15T00:00:00.000-04:00
+	2015-05-16T00:00:00.000-04:00
+	2015-05-17T00:00:00.000-04:00
+	2015-05-18T00:00:00.000-04:00
+	2015-05-19T00:00:00.000-04:00
+	2015-05-20T00:00:00.000-04:00
+	2015-05-21T00:00:00.000-04:00
+	2015-05-22T00:00:00.000-04:00
+	2015-05-23T00:00:00.000-04:00
+	2015-05-24T00:00:00.000-04:00
+	2015-05-25T00:00:00.000-04:00
+	2015-05-26T00:00:00.000-04:00
+	2015-05-27T00:00:00.000-04:00
+	2015-05-28T00:00:00.000-04:00
+	2015-05-29T00:00:00.000-04:00
+	2015-05-30T00:00:00.000-04:00
+	2015-05-31T00:00:00.000-04:00
+	2015-06-01T00:00:00.000-04:00
+	2015-06-02T00:00:00.000-04:00
+	2015-06-03T00:00:00.000-04:00
+
+The file is too big for json formatters online. I found a [Sublime plugin](https://github.com/dzhibas/SublimePrettyJson) that might help. Also [this one](http://tech.flyclops.com/jsontree-sublime-text-3-plugin-407.)
+
+
+
+	{
+    "sampleID": null,
+    "dateTimeUTC": null,
+    "methodCode": null,
+    "offsetTypeID": null,
+    "timeOffset": null,
+    "censorCode": null,
+    "codedVocabularyTerm": null,
+    "labSampleCode": null,
+    "value": "2.3",
+    "metadataTime": null,
+    "sourceCode": null,
+    "accuracyStdDev": null,
+    "qualityControlLevelCode": null,
+    "qualifiers": [
+      "P"
+    ],
+	"offsetValue": null,
+	"sourceID": null,
+	"dateTimeAccuracyCd": null,
+	"methodID": null,
+	"codedVocabulary": null,
+	"offsetTypeCode": null,
+	"oid": null,
+	"dateTime": "2015-05-31T00:00:00.000-04:00"
+	},
+
+
+	  "geoLocation": {
+            "geogLocation": {
+              "srs": "EPSG:4326",
+              "latitude": 43.32206866,
+              "longitude": -122.1955907
+
+               {
+              "name": "hucCd",
+              "uri": null,
+              "value": "17100301",
+              "type": null
+            },
+
+
+
+OK! These look like values.
+
+	30
+	36
+	44
+	58
+	62
+	66
+	92
+	87
+	75
+	66
+	67
+	71
+	77
+	52
+	50
+	78
+	100
+	146
+	108
+	66
+	60
+	6
+
+So, to sum up that endeavour:
+1. In a directory containing data.json, open the Python interpreter ``$ python3``
+2. Import the JSON Python library ``>>> import json``
+3. Create the JSON file object ``>>> with open('data.json', 'r+') as f:``
+4. Decode the JSON object ``>>>    data=json.load(f)``
+5. Traverse through all of the container layers ``>>> values = data['value']['timeSeries'][0]['values']``
+6. Iterate over all objects at the next level of the heirarchy. ``>>> for i in values[0]['value']:``
+7. Print glorious Streamflow values to your screen. ``>>>  print(i['value'])``
+
+
+Now, the script...
+
+http://www.bogotobogo.com/python/python_http_web_services.php
+http://chimera.labs.oreilly.com/books/1230000000393/ch06.html#_discussion_95
+http://www.bogotobogo.com/WebTechnologies/OpenAPI_RESTful.php
+
+#Import Libraries.
+import requests
+import json
+
+# This URL is generated by the USGS water web services daily values service tester (what a mouthful). This is just HUC_17, and just for 2015 so far.
+url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2015-01-01&endDT=2015-06-04&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+# Create the request
+r = requests.get(url)
+
+#deserialize so I can manipulate the data prior to writing it to a file
+data = json.dumps(r, indent=4)
+
+#reserialize the content and write it to 'data.json'
+with open('data.json', 'r+') as f:
+	data = json.load(f)	
+
+http://stackoverflow.com/questions/27767346/extract-json-attributes-using-python-and-filter-out-some-data
+https://docs.python.org/3/tutorial/inputoutput.html
+http://stackoverflow.com/questions/12540564/write-python-dictionary-obtained-from-json-in-a-file
+
+	with open('newdata.json', 'r+') as f:
+	for entry in values:
+		f.write(entry['value'])
+
+
+	Traceback (most recent call last):
+	  File "single_huc_dailyvals_request.py", line 19, in <module>
+	    with open('newdata.json', 'r+') as f:
+	FileNotFoundError: [Errno 2] No such file or directory: 'newdata.json'
+
+	with open('newdata.json', 'w+') as f:
+	for entry in values:
+		f.write(entry['value'])
+
+	Traceback (most recent call last):
+	File "single_huc_dailyvals_request.py", line 21, in <module>
+	f.write(entry['value'])
+	TypeError: must be str, not list
+
+	with open('newdata.json', 'w+') as f:
+	for entry in values:
+		f.write(bytes(entry['value']), 'UTF-8')
+
+	Traceback (most recent call last):
+		File "single_huc_dailyvals_request.py", line 21, in <module>
+    		f.write(bytes(entry['value']), 'UTF-8')
+    TypeError: 'dict' object cannot be interpreted as an integer
+
+changing bytes() to str() seems to have worked.
+I'm still running around in circles trying to understand the heirarchy of this JSON.
+
+>>> with open('data_to_view.json', 'w+') as f:
+...     json.dump(data, f)
+
+
+http://www.diveintopython3.net/http-web-services.html
+http://xahlee.info/perl-python/python_json_tutorial.html
+https://www.jsoneditoronline.org/
