@@ -7,9 +7,10 @@
     <script src="vendor/d3.min.js"></script>
 		<script src="http://d3js.org/topojson.v1.min.js"></script>
         <script src="http://d3js.org/d3.geo.tile.v0.min.js"></script>
-        <script src="http://adnanwahab.com/pathgl/dist/pathgl.min.js"
-charset="utf-8"></script>
-		<script type="text/javascript" src="build/js/all.min.js"></script>
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.7.0/mapbox-gl.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.7.0/mapbox-gl.css' rel='stylesheet' />
+        <script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.9/mapbox.css' rel='stylesheet' />	
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
      <!-- <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
@@ -28,11 +29,24 @@ charset="utf-8"></script>
         background: gainsboro;
         margin: 0 auto;
     }*/
+    #map { position:absolute; top:0; bottom:0; width:100%; height: 300px; }
+/*    #map{
+        height: 300px;
+    }*/
 
     </style>
 </head>
     <body>
-    <!-- 	<div id='national_view'></div>
-        <div id='local_view'></div> -->
+    <div id='map'></div>
+<!--         <script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYndzdHVkIiwiYSI6ImQ2ZTJlMTdjODMwNGJhZjlmOWM5MTY2NzZhYmY1YmIwIn0.fDkR66VlhLh5BHk6f1MeIA';
+var map = new mapboxgl.Map({
+  container: 'map', // container id
+  style: 'https://www.mapbox.com/mapbox-gl-styles/styles/outdoors-v7.json', //stylesheet location
+  center: [40, -74.50], // starting position
+  zoom: 9 // starting zoom
+});
+</script> -->
+        <script type="text/javascript" src="build/js/all.min.js"></script>
     </body>
 </html>

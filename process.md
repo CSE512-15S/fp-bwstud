@@ -1976,3 +1976,278 @@ I'm still running around in circles trying to understand the heirarchy of this J
 http://www.diveintopython3.net/http-web-services.html
 http://xahlee.info/perl-python/python_json_tutorial.html
 https://www.jsoneditoronline.org/
+
+6.5.15
+====================================================
+Ok, the Python script is working. It's requesting the data from the web service, parsing it, and writing the streamflow values to a new file. Here's that code:
+
+	#libs
+	import requests
+	import json
+	import simplejson
+
+	# daily values request url, generated from USGS web services
+	#url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&&period=P3D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+	url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2015-01-01&endDT=2015-06-04&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+	# create request as json
+	r = requests.get(url)
+	# content = r.content
+	data = simplejson.loads(r.text)
+	# #deserialize so I can manipulate the data prior to writing it to a file
+	# data = r.json()
+
+	values = data['value']['timeSeries'][0]['values'][0]['value']
+	#reserialize the content and write it to 'data.json'
+	with open('newdata.json', 'w+') as f:
+		for entry in values:
+			f.write('streamflow: ' + entry['value'] + "\n")
+
+But now I'd like to do what I need to include datetime, geolocation and name. Let's do that. The dateTime is unecessarily long, but I'll worry about that later. Fuck. It just became clear that I need to refactor the script so the loop is higher in the tree. 
+
+I'm so close.I've spent the last couple of hours figuring out how to get the script to spit out valid json. Here's where I'm at:
+
+#libs
+import requests
+import json
+import simplejson
+
+# daily values request url, generated from USGS web services
+#url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&&period=P3D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2015-01-01&endDT=2015-06-04&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+	# create request as json
+	r = requests.get(url)
+	# content = r.content
+	data = simplejson.loads(r.text)
+	# #deserialize so I can manipulate the data prior to writing it to a file
+	# data = r.json()
+
+	timeSeries = data['value']['timeSeries']
+	sourceInfo = data['value']['timeSeries'][0]['sourceInfo']
+	counter = 0
+	counter2 = 0
+	#reserialize the content and write it to 'data.json'
+	with open('newdata.json', 'w+') as f:
+		for site in timeSeries:
+			counter+=1
+			json_data = '{"site": { "properties": { "usgs_name":  ' + '"' + site['sourceInfo']['siteName'] + '",' + \
+			'"HUC": "{}"'.format(site['sourceInfo']['siteProperty'][1]['value']) + ',' + \
+			'"Latitude": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['latitude']) + ',' + \
+			'"Longitude": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['longitude']) + \
+			'}, "timeSeries": ['
+			for chunk in site['values']:
+				for daily in chunk['value']:
+					counter2+=1
+					json_data = json_data + '{"streamflow": ' + '"' + daily['value'] + '",' + \
+					'"dateTime": ' + '"' + daily['dateTime'] + '"'
+					if counter2 == len(chunk['value']):
+						json_data = json_data + '}]'
+					else:
+						json_data = json_data +'},'
+			if counter == len(timeSeries):
+				json_data = json_data + '}}'
+			else:
+				json_data = json_data + '},'
+		f.write(json_data)
+
+The resulting JSON looks like:
+
+	{"site": { "properties": { "usgs_name":  "Libby Wetland Site bl Schrieber Lake nr Libby, MT","HUC": "17010102","Latitude": "48.1022259","Longitude": "-115.4089188"}, "timeSeries": [{"streamflow": "0.40","dateTime": "2015-01-01T00:00:00.000-05:00"},{"streamflow": "0.60","dateTime": "2015-01-02T00:00:00.000-05:00"},{"streamflow": "0.50","dateTime": "2015-01-03T00:00:00.000-05:00"},{"streamflow": "0.80","dateTime": "2015-01-04T00:00:00.000-05:00"},{"streamflow": "0.90","dateTime": "2015-01-05T00:00:00.000-05:00"},{"streamflow": "1.0","dateTime": "2015-01-06T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-07T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-08T00:00:00.000-05:00"},{"streamflow": "0.90","dateTime": "2015-01-09T00:00:00.000-05:00"},{"streamflow": "0.90","dateTime": "2015-01-10T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-11T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-12T00:00:00.000-05:00"},{"streamflow": "1.0","dateTime": "2015-01-13T00:00:00.000-05:00"},{"streamflow": "1.0","dateTime": "2015-01-14T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-15T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-16T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-17T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-18T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-19T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-20T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-21T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-22T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-23T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-24T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-25T00:00:00.000-05:00"},{"streamflow": "1.3","dateTime": "2015-01-26T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-27T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-01-28T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-29T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-30T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-01-31T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-02-01T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-02-02T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-02-03T00:00:00.000-05:00"},{"streamflow": "1.1","dateTime": "2015-02-04T00:00:00.000-05:00"},{"streamflow": "1.2","dateTime": "2015-02-05T00:00:00.000-05:00"},{"streamflow": "1.5","dateTime": "2015-02-06T00:00:00.000-05:00"},{"streamflow": "2.0","dateTime": "2015-02-07T00:00:00.000-05:00"},{"streamflow": "2.5","dateTime": "2015-02-08T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-02-09T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-10T00:00:00.000-05:00"},{"streamflow": "3.4","dateTime": "2015-02-11T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-02-12T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-02-13T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-14T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-15T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-16T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-17T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-18T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-19T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-20T00:00:00.000-05:00"},{"streamflow": "3.5","dateTime": "2015-02-21T00:00:00.000-05:00"},{"streamflow": "3.4","dateTime": "2015-02-22T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-02-23T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-02-24T00:00:00.000-05:00"},{"streamflow": "3.4","dateTime": "2015-02-25T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-02-26T00:00:00.000-05:00"},{"streamflow": "3.4","dateTime": "2015-02-27T00:00:00.000-05:00"},{"streamflow": "3.4","dateTime": "2015-02-28T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-03-01T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-03-02T00:00:00.000-05:00"},{"streamflow": "3.3","dateTime": "2015-03-03T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-03-04T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-03-05T00:00:00.000-05:00"},{"streamflow": "3.1","dateTime": "2015-03-06T00:00:00.000-05:00"},{"streamflow": "3.0","dateTime": "2015-03-07T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-03-08T00:00:00.000-05:00"},{"streamflow": "3.2","dateTime": "2015-03-09T00:00:00.000-04:00"},{"streamflow": "3.5","dateTime": "2015-03-10T00:00:00.000-04:00"},{"streamflow": "3.5","dateTime": "2015-03-11T00:00:00.000-04:00"},{"streamflow": "4.0","dateTime": "2015-03-12T00:00:00.000-04:00"},{"streamflow": "4.5","dateTime": "2015-03-13T00:00:00.000-04:00"},{"streamflow": "5.0","dateTime": "2015-03-14T00:00:00.000-04:00"},{"streamflow": "5.7","dateTime": "2015-03-15T00:00:00.000-04:00"},{"streamflow": "9.1","dateTime": "2015-03-16T00:00:00.000-04:00"},{"streamflow": "9.7","dateTime": "2015-03-17T00:00:00.000-04:00"},{"streamflow": "9.0","dateTime": "2015-03-18T00:00:00.000-04:00"},{"streamflow": "8.0","dateTime": "2015-03-19T00:00:00.000-04:00"},{"streamflow": "7.5","dateTime": "2015-03-20T00:00:00.000-04:00"},{"streamflow": "7.0","dateTime": "2015-03-21T00:00:00.000-04:00"},{"streamflow": "7.3","dateTime": "2015-03-22T00:00:00.000-04:00"},{"streamflow": "6.5","dateTime": "2015-03-23T00:00:00.000-04:00"},{"streamflow": "6.9","dateTime": "2015-03-24T00:00:00.000-04:00"},{"streamflow": "6.3","dateTime": "2015-03-25T00:00:00.000-04:00"},{"streamflow": "5.9","dateTime": "2015-03-26T00:00:00.000-04:00"},{"streamflow": "5.8","dateTime": "2015-03-27T00:00:00.000-04:00"},{"streamflow": "6.1","dateTime": "2015-03-28T00:00:00.000-04:00"},{"streamflow": "6.3","dateTime": "2015-03-29T00:00:00.000-04:00"},{"streamflow": "5.9","dateTime": "2015-03-30T00:00:00.000-04:00"},{"streamflow": "5.5","dateTime": "2015-03-31T00:00:00.000-04:00"},{"streamflow": "5.3","dateTime": "2015-04-01T00:00:00.000-04:00"},{"streamflow": "5.0","dateTime": "2015-04-02T00:00:00.000-04:00"},{"streamflow": "4.9","dateTime": "2015-04-03T00:00:00.000-04:00"},{"streamflow": "4.8","dateTime": "2015-04-04T00:00:00.000-04:00"},{"streamflow": "4.7","dateTime": "2015-04-05T00:00:00.000-04:00"},{"streamflow": "4.7","dateTime": "2015-04-06T00:00:00.000-04:00"},{"streamflow": "4.7","dateTime": "2015-04-07T00:00:00.000-04:00"},{"streamflow": "4.5","dateTime": "2015-04-08T00:00:00.000-04:00"},{"streamflow": "4.4","dateTime": "2015-04-09T00:00:00.000-04:00"},{"streamflow": "4.3","dateTime": "2015-04-10T00:00:00.000-04:00"},{"streamflow": "4.2","dateTime": "2015-04-11T00:00:00.000-04:00"},{"streamflow": "4.1","dateTime": "2015-04-12T00:00:00.000-04:00"},{"streamflow": "3.9","dateTime": "2015-04-13T00:00:00.000-04:00"},{"streamflow": "3.9","dateTime": "2015-04-14T00:00:00.000-04:00"},{"streamflow": "3.8","dateTime": "2015-04-15T00:00:00.000-04:00"},{"streamflow": "3.7","dateTime": "2015-04-16T00:00:00.000-04:00"},{"streamflow": "3.6","dateTime": "2015-04-17T00:00:00.000-04:00"},{"streamflow": "3.5","dateTime": "2015-04-18T00:00:00.000-04:00"},{"streamflow": "3.4","dateTime": "2015-04-19T00:00:00.000-04:00"},{"streamflow": "3.4","dateTime": "2015-04-20T00:00:00.000-04:00"},{"streamflow": "3.3","dateTime": "2015-04-21T00:00:00.000-04:00"},{"streamflow": "3.3","dateTime": "2015-04-22T00:00:00.000-04:00"},{"streamflow": "3.1","dateTime": "2015-04-23T00:00:00.000-04:00"},{"streamflow": "3.1","dateTime": "2015-04-24T00:00:00.000-04:00"},{"streamflow": "3.1","dateTime": "2015-04-25T00:00:00.000-04:00"},{"streamflow": "3.2","dateTime": "2015-04-26T00:00:00.000-04:00"},{"streamflow": "3.2","dateTime": "2015-04-27T00:00:00.000-04:00"},{"streamflow": "3.1","dateTime": "2015-04-28T00:00:00.000-04:00"},{"streamflow": "2.9","dateTime": "2015-04-29T00:00:00.000-04:00"},{"streamflow": "2.8","dateTime": "2015-04-30T00:00:00.000-04:00"},{"streamflow": "2.8","dateTime": "2015-05-01T00:00:00.000-04:00"},{"streamflow": "2.8","dateTime": "2015-05-02T00:00:00.000-04:00"},{"streamflow": "2.7","dateTime": "2015-05-03T00:00:00.000-04:00"},{"streamflow": "2.7","dateTime": "2015-05-04T00:00:00.000-04:00"},{"streamflow": "2.6","dateTime": "2015-05-05T00:00:00.000-04:00"},{"streamflow": "2.5","dateTime": "2015-05-06T00:00:00.000-04:00"},{"streamflow": "2.5","dateTime": "2015-05-07T00:00:00.000-04:00"},{"streamflow": "2.5","dateTime": "2015-05-08T00:00:00.000-04:00"},{"streamflow": "2.4","dateTime": "2015-05-09T00:00:00.000-04:00"},{"streamflow": "2.4","dateTime": "2015-05-10T00:00:00.000-04:00"},{"streamflow": "2.3","dateTime": "2015-05-11T00:00:00.000-04:00"},{"streamflow": "2.3","dateTime": "2015-05-12T00:00:00.000-04:00"},{"streamflow": "2.4","dateTime": "2015-05-13T00:00:00.000-04:00"},{"streamflow": "2.6","dateTime": "2015-05-14T00:00:00.000-04:00"},{"streamflow": "2.5","dateTime": "2015-05-15T00:00:00.000-04:00"},{"streamflow": "2.4","dateTime": "2015-05-16T00:00:00.000-04:00"},{"streamflow": "2.3","dateTime": "2015-05-17T00:00:00.000-04:00"},{"streamflow": "2.2","dateTime": "2015-05-18T00:00:00.000-04:00"},{"streamflow": "2.1","dateTime": "2015-05-19T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-20T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-21T00:00:00.000-04:00"},{"streamflow": "1.9","dateTime": "2015-05-22T00:00:00.000-04:00"},{"streamflow": "1.9","dateTime": "2015-05-23T00:00:00.000-04:00"},{"streamflow": "1.8","dateTime": "2015-05-24T00:00:00.000-04:00"},{"streamflow": "1.9","dateTime": "2015-05-25T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-26T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-27T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-28T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-05-29T00:00:00.000-04:00"},{"streamflow": "2.1","dateTime": "2015-05-30T00:00:00.000-04:00"},{"streamflow": "2.3","dateTime": "2015-05-31T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-06-01T00:00:00.000-04:00"},{"streamflow": "2.2","dateTime": "2015-06-02T00:00:00.000-04:00"},{"streamflow": "2.2","dateTime": "2015-06-03T00:00:00.000-04:00"},{"streamflow": "2.0","dateTime": "2015-06-04T00:00:00.000-04:00"},}}
+
+At the very end there you can see that my efforts to alter the ending on the last iteration through the data aren't working.
+
+This is supposed to close off the time-series array:
+	
+	if counter2 == len(chunk['value']):
+					json_data = json_data + '}]'
+				else:
+					json_data = json_data +'},'
+
+And this is supposed to close off the object for this site before moving on to the next one:
+
+	if counter == len(timeSeries):
+			json_data = json_data + '}}'
+		else:
+			json_data = json_data + '},'
+
+Manually changing this ``},}}`` to this ``}]}}`` makes it valid (fig 9.0). I do, however, need to add a comma at the end so I can move to the next site.
+
+I've gotten to here:
+
+	#libs
+	import requests
+	import json
+	import simplejson
+
+	# daily values request url, generated from USGS web services
+	#url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&&period=P3D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+	url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2015-01-01&endDT=2015-06-04&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+	# create request as json
+	r = requests.get(url)
+	# content = r.content
+	data = simplejson.loads(r.text)
+	# #deserialize so I can manipulate the data prior to writing it to a file
+	# data = r.json()
+
+	timeSeries = data['value']['timeSeries']
+	counter = 0
+	#reserialize the content and write it to 'data.json'
+	with open('newdata.json', 'a') as f:
+		for site in timeSeries:
+			counter+=1
+			json_data = '{"site": { "properties": { "usgs_name":  ' + '"' + site['sourceInfo']['siteName'] + '",' + \
+			'"HUC": "{}"'.format(site['sourceInfo']['siteProperty'][1]['value']) + ',' + \
+			'"Latitude": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['latitude']) + ',' + \
+			'"Longitude": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['longitude']) + \
+			'}, "timeSeries": ['
+			for chunk in site['values']:
+				counter2 = 0
+				for daily in chunk['value']:
+					counter2+=1
+					json_data = json_data + '{"streamflow": ' + '"' + daily['value'] + '",' + \
+					'"dateTime": ' + '"' + daily['dateTime'] + '"'
+					if counter2 < len(chunk['value']):
+						json_data = json_data + '},'
+					else:
+						json_data = json_data +'}]'
+			if counter < len(timeSeries):
+				json_data = json_data + '},'
+			else:
+				json_data = json_data + '}}'
+		f.write(json_data)
+
+But it gets screwed up between sites 
+
+	}]}},"site": {
+	   ^
+Also, even though I changed the file mode to append it's only writing two sites...
+
+Now I'm getting the error, "duplicate key: sites"
+
+I need a break.
+	**
+    ** 
+    /\
+   /||\
+  /~||~\
+ /~~||~~\
+/~~~||~~~\
+    ||
+
+For clarity, I'm breaking this out into sections.
+
+Setup - 
+
+	#libs
+	import requests
+	import json
+	import simplejson
+
+	# daily values request url, generated from USGS web services
+	#url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&&period=P3D&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+	url = "http://waterservices.usgs.gov/nwis/dv/?format=json&indent=on&huc=17&startDT=2015-01-01&endDT=2015-06-04&parameterCd=00060&siteType=OC,OC-CO,ES,LK,ST,ST-CA,ST-DCH,ST-TS&siteStatus=active"
+
+	# create request as json
+	r = requests.get(url)
+	# content = r.content
+	data = simplejson.loads(r.text)
+	# #deserialize so I can manipulate the data prior to writing it to a file
+	# data = r.json()
+
+	timeSeries = data['value']['timeSeries']
+	counter = 0
+
+Site description and properties-
+
+	with open('newdata.json', 'a') as f:
+		for site in timeSeries:
+			json_data = '{'
+			counter+=1
+			json_data = json_data + '"sitecode": "{}"'.format(site['sourceInfo']['siteCode'][0]['value']) + ',' + \
+			'"properties": { "usgs_name":  ' + '"' + site['sourceInfo']['siteName'] + '",' + \
+			'"HUC": "{}"'.format(site['sourceInfo']['siteProperty'][1]['value']) + ',' + \
+			'"lat": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['latitude']) + ',' + \
+			'"long": "{}"'.format(site['sourceInfo']['geoLocation']['geogLocation']['longitude']) + \
+			'},
+
+Streamflow timeseries data-
+
+	"timeSeries": ['
+		for chunk in site['values']:
+			counter2 = 0
+			for daily in chunk['value']:
+				counter2+=1
+				json_data = json_data + '{"streamflow": ' + '"' + daily['value'] + '",' + \
+				'"dateTime": ' + '"' + daily['dateTime'] + '"'
+				if counter2 < len(chunk['value']):
+					json_data = json_data + '},'
+				else:
+					json_data = json_data +'}]'
+
+The finish-
+
+	if counter < len(timeSeries):
+			json_data = json_data + '},'
+		else:
+			json_data = json_data + '}'
+	f.write(json_data)
+
+Interesting: http://water.usgs.gov/nsip/
+
+My problem is in the finish somehwere, I think. Each site ([stream gage](http://water.usgs.gov/nsip/definition9.html)) needs to be a self-contained object, separated by commas until the last one, which should not be followed by a comma. I'm trying to accomplish that with an if statement dictating that while a 'counter' variable is less than the length of the time-series (the list of retrieved gage sites, in this request that's 678 objecst (fig 9.1, 9.2)) the site object terminates in '}'. When it reaches the last object, it should terminate in a simple, '}'.
+
+
+testing my logic:
+
+	>>> counter = 0
+	>>> for site in timeSeries:
+	...     counter += 1
+	...     if counter < len(timeSeries):
+	...         print("not the end")
+	...     else:
+	...         print("the end")
+	...
+
+	...
+	not the end
+	not the end
+	not the end
+	not the end
+	the end
+	>>> 
+
+That looks right.
+
+Hmm, since I was in "append" mode I was just adding data to my json file everytime I ran the script, keeping all the old problems. Great.
+
+This should prevent that in the future:
+
+	try:
+	    os.remove('newdata.json')
+	except OSError:
+	    pass
+
+Ha. Now it works. Or, at least, it's valid JSON. I again only have one site in my resulting object... It's the Libby Wetland Site near Libby Montana. All alone. Why!?
+
+I see 678 objects in the raw response. I see 678 objects when I iterate over 'site in timeSeries'.
+
+	>>> for site in timeSeries:
+	...     x+=1
+	...     print(x)
+	... 
+	1
+	2
+	3
+	4
+	5
+	...
+
+
+
+I posted a question on Stack Overflow asking for advice. While no one solved this problem, several people told me I shouldn't be building JSON from strings, and that I should build a dictionary instead. Obviously. 
+
+I have 8 hours until I have to turn in a poster for this.
+
+http://www.yilmazhuseyin.com/blog/dev/advanced_json_manipulation_with_python/

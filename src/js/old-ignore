@@ -1,0 +1,40 @@
+var width = 960;
+var height = 1120;
+
+// var map = new mapboxgl.Map({
+//     container: 'map',
+//     center: [37.772537, -122.420679],
+//     zoom: 13,
+//     style: style_object,
+//     hash: true
+// });
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width)
+    .attr("height", height);
+
+var projection = d3.geo.albersUsa()
+    .scale(1280)
+    .translate([width / 2, height / 2]);
+
+var path = d3.geo.path().projection(projection);
+
+d3.csv("../../data/real_h17.csv", function(error, data){
+	console.log(data);
+	data.forEach(function(d){
+		d.lng = +d.lng;
+		d.lat = +d.lat;
+	})
+
+	var markers = svg.append('g')
+		.attr('class', 'gage_site')
+		.selectAll('circle')
+		.data(data)
+		.attr('cx', function(d){
+			return projection([d.lng, d.lat])[0]
+		})
+		.attr('cy', function(d){
+			return projection([d.lng, d.lat])[1]
+		})
+		.attr('r', 3)
+});
