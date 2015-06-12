@@ -1,10 +1,14 @@
-#Towards a Geolocated Interactive Visualization of Streamflow in the Browser
-bwstud@uw.edu
-This project was done independently by Brian Studwell.
+#Towards a Geolocated Interactive Visualization of Streamflow in the Browser  
+
+bwstud@uw.edu  
+
+This project was done independently by Brian Studwell.  
+
 CSE 512 — Data Visualization Spring 2015
 
 
-[Poster](final/poster-bwstud_v2.0.1.pdf)
+[Poster](final/poster-bwstud_v2.0.1.pdf)   
+
 [Paper](paper-bwstud.pdf)
 
 ##Abstract
